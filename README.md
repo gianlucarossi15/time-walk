@@ -16,7 +16,7 @@ Each time series is represented by two property lists, one for timestamps and on
 
 ### Data generation
  - The **FinBench** datasets were obtained from the official repository:  
-   [https://drive.google.com/drive/folders/1NIAo4KptskBytbXoOqmF3Sto4hTX3JIH](https://drive.google.com/drive/folders/1NIAo4KptskBytbXoOqmF3Sto4hTX3JIH) made available by LDBC foundation itself.
+   [https://drive.google.com/drive/folders/1NIAo4KptskBytbXoOqmF3Sto4hTX3JIH](https://drive.google.com/drive/folders/1NIAo4KptskBytbXoOqmF3Sto4hTX3JIH) made available by LDBC council itself.
     Experiments were conducted using the following scaling factors: **0.01**, **0.1**, **0.3**, and **1.0**. Each dataset has been enriched with the balance time series for the Account node type, 2000, 4000, 6000, and 10000 time series respectively.
     Each dataset was further enriched with balance time series for the **Account** node type, containing 2k, 4k, 6k, and 10k time series, respectively.
  - The **Synthea** datasets were obtained from the official repository:  
@@ -25,3 +25,24 @@ Each time series is represented by two property lists, one for timestamps and on
     We created the parental and friendship relationships among patients in order to create a connected graph structure by looking at age gap and city of residence, taken from the patients.csv file.
  - NYC dataset has been downloaded from the repository: [https://zenodo.org/records/13846868](https://zenodo.org/records/13846868).
    No further processing is needed for the NYC dataset, as the time series are already associated with the corresponding nodes in the graph.
+
+### Ingestion
+For the ingestion use the scripts in the `resources/scripts` folder and place them in the `import` folder of your Neo4j database installation.
+
+### Execution
+All experiments were conducted using Neo4j Enterprise 5.26.12 TimeWalk operator has developed a dedicated Java plugin that extends the Neo4j API. Experiments were executed using the parallel Cypher runtime, with Java 17 on an M1 Max processor (10 cores) and 64 GB of RAM.
+You can use Neo4j Community Edition as well, but please note that the performance may vary due to the lack of certain optimizations available in the Enterprise Edition.
+In order to run the experiments, please follow these steps:
+1. Use the maven to build the Time-Walk plugin:
+   ```bash
+   mvn clean install
+   ```
+   ```bash
+   mvn clean package
+   ```
+
+2. Move the produced `timeWalk-1.0-SNAPSHOT.jar` file from the `target` folder to the `plugins` folder of your Neo4j database installation and make sure to enable the `apoc` and `time-walk` procedures in the `neo4j.conf` file:
+   ```
+   dbms.security.procedures.unrestricted=apoc.*,timewalk.*
+   ```
+3.  Start your Neo4j database.
