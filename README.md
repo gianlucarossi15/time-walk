@@ -1,6 +1,6 @@
 #### Unifying Graph Traversals and Time Series Joins in Hybrid Graphs repository code
 This repository contains code and resources for the research paper "Unifying Graph Traversals and Time Series Joins in Hybrid Graphs" 
-by Gianluca Rossi, Angela Bonifati, Riccardo Tommasini.
+by Gianluca Rossi (Lyon 1 University & CNRS Liris), Angela Bonifati (Lyon 1 University, CNRS Liris & IUF), Riccardo Tommasini (INSA Lyon University & CNRS Liris).
 
 This work defines a declarative framework to express and evaluate queries that combine graph traversals and time series joins over hybrid graph data models.
 
