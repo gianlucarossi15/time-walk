@@ -1,0 +1,9 @@
+dataset;window;relation;ts;ts_join_time;neo4j_time;timewalk_time
+synthea@5k;5;overlaps;bmi;2937122;3;172
+synthea@10k;5;overlaps;bmi;12280000;3;3502
+synthea@100k;5;overlaps;bmi;1228000000;4; 9251
+synthea@30k;5;overlaps;bmi;110520000;4;3933
+finbench@500k;30;overlaps;balance;13000000000;45;22860
+finbench@5k;30;overlaps;balance;520000000;21;9077
+finbench@50k;30;overlaps;balance;2080000000;27;13660
+finbench@160k;30;overlaps;balance;4680000000;33;16992
