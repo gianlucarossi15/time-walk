@@ -11,7 +11,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
-public class Scalability {
+public class ScalabilityOptimized {
     public static void main(String[] args) throws IOException, InterruptedException {
         var url = "bolt://localhost:7687";
         final int ITERATION = 3;
@@ -26,20 +26,21 @@ public class Scalability {
             String delimiter = ";";
 
             long timestamp = System.currentTimeMillis();
+            boolean append = true;
             BufferedWriter writer = new BufferedWriter(
                     new FileWriter(
-                            String.format("src/main/resources/scalability_time_%d.csv", timestamp))
+                            String.format("src/main/resources/optimized_scalability_time_revision.csv", timestamp), append)
             );
-            writer.write("dataset"+delimiter+"window"+delimiter+"relation"+delimiter+"ts"+delimiter+"query_time\n");
+            if (!append)
+                writer.write("dataset"+delimiter+"window"+delimiter+"relation"+delimiter+"ts"+delimiter+"query_time\n");
 
             int[] syntheaWindows = {4, 5, 7};
             int [] finbenchWindows = {30, 50, 70};
             String[] relations = {"overlaps", "before", "meets", "equal"};
             String[] syntheaTimeSeries = {"bmi", "bodyWeight", "bodyHeight", "heartRate", "respiratoryRate"};
             String [] finbenchTimeSeries= {"balance"};
-            String[] syntheadatasetName = {"synthea_5k", "synthea_10k", "synthea_30k", "synthea_100k"};
-            String[] finbenchDatasetName = {"finbench_5k","finbench_50k","finbench_160k","finbench_500k"};
-            for (String name : finbenchDatasetName) {
+            String [] datasetNames = {"synthea_5k", "synthea_10k", "synthea_30k", "synthea_100k", "finbench_50k", "finbench_160k", "finbench_500k", "finbench_1m"};
+            for (String name : datasetNames) {
                 switch (name) {
                     case "synthea_5k" -> {
                         runDataset(relations, syntheaTimeSeries, syntheaWindows, "synthea_5k", driver, ITERATION, writer, delimiter);
@@ -53,9 +54,6 @@ public class Scalability {
                     case "synthea_100k" -> {
                         runDataset(relations, syntheaTimeSeries, syntheaWindows, "synthea_100k", driver, ITERATION, writer, delimiter);
                     }
-                    case "finbench_5k" -> {
-                        runDataset(relations, finbenchTimeSeries, finbenchWindows, "finbench_5k", driver, ITERATION, writer, delimiter);
-                    }
                     case "finbench_50k" -> {
                         runDataset(relations, finbenchTimeSeries, finbenchWindows, "finbench_50k", driver, ITERATION, writer, delimiter);
                     }
@@ -64,6 +62,9 @@ public class Scalability {
                     }
                     case "finbench_500k" -> {
                         runDataset(relations, finbenchTimeSeries, finbenchWindows, "finbench_500k", driver, ITERATION, writer, delimiter);
+                    }
+                    case "finbench_1m" -> {
+                        runDataset(relations, finbenchTimeSeries, finbenchWindows, "finbench_1m", driver, ITERATION, writer, delimiter);
                     }
 
                 }
@@ -96,66 +97,69 @@ public class Scalability {
             pb = new ProcessBuilder("sh", "src/main/resources/synthea_100k.sh");
             datasetName = "synthea";
         }
-        else if (dataset.equals("finbench_5k")) {
-            pb = new ProcessBuilder("sh", "src/main/resources/finbench_5k.sh");
-            datasetName = "finbench";
-        }
-        else if (dataset.equals("finbench_50k")){
+        else if (dataset.equals("finbench_50k")) {
             pb = new ProcessBuilder("sh", "src/main/resources/finbench_50k.sh");
             datasetName = "finbench";
-            }
+        }
         else if (dataset.equals("finbench_160k")){
             pb = new ProcessBuilder("sh", "src/main/resources/finbench_160k.sh");
             datasetName = "finbench";
-        }
-        else if (dataset.equals("finbench_500k")) {
+            }
+        else if (dataset.equals("finbench_500k")){
             pb = new ProcessBuilder("sh", "src/main/resources/finbench_500k.sh");
             datasetName = "finbench";
         }
+        else if (dataset.equals("finbench_1m")) {
+            pb = new ProcessBuilder("sh", "src/main/resources/finbench_1m.sh");
+            datasetName = "finbench";
+        }
 
-        pb.redirectErrorStream(true);
-        Process process = pb.start();
-        int exitCode = process.waitFor();
-        if (exitCode != 0) {
-            throw new RuntimeException("script failed with exit code " + exitCode);
+        if (pb != null)
+        {
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+            int exitCode = process.waitFor();
+            if (exitCode != 0) {
+                throw new RuntimeException("script failed with exit code " + exitCode);
+            }
         }
         String query = "";
         if(datasetName.equals("synthea"))
         query= """ 
             CYPHER RUNTIME= PARALLEL
-            MATCH p=(a:Patient)-[:MOTHER_OF]->(b:Patient) CALL edge2Time.TimeWalkPath(p,"%s","%s",%d,0.85) YIELD path RETURN count(*)""";
+            MATCH p=(a:Patient)-[:FATHER_OF]->(b:Patient) CALL edge2Time.TimeWalkPathOpt(p,"%s","%s",%d,0.85) YIELD path RETURN count(*)""";
         else {
-            if (dataset.equals("finbench_5k"))
+            if (dataset.equals("finbench_50k"))
             query = """ 
                     CYPHER RUNTIME= PARALLEL
                     MATCH p=(a1:Account)-[:Transfer]->(a2:Account), (p1:Person)-[:Own]->(a1), (a2)<-[:Own]-(p2:Person)
                     WHERE p1.country <> p2.country AND a1.balance_values IS NOT NULL AND a2.balance_values IS NOT NULL
-                    LIMIT 700
-                    CALL edge2Time.TimeWalkPath(p, "%s", "%s", %d, 0.85) YIELD path
-                    RETURN COUNT(*)""";
-            else if(dataset.equals("finbench_50k"))
-                query = """ 
-                    CYPHER RUNTIME= PARALLEL
-                    MATCH p=(a1:Account)-[:Transfer]->(a2:Account), (p1:Person)-[:Own]->(a1), (a2)<-[:Own]-(p2:Person)
-                    WHERE p1.country <> p2.country AND a1.balance_values IS NOT NULL AND a2.balance_values IS NOT NULL
-                    LIMIT 1000
-                    CALL edge2Time.TimeWalkPath(p, "%s", "%s", %d, 0.85) YIELD path
+                    LIMIT 10000
+                    CALL edge2Time.TimeWalkPathOpt(p, "%s", "%s", %d, 0.85) YIELD path
                     RETURN COUNT(*)""";
             else if(dataset.equals("finbench_160k"))
                 query = """ 
                     CYPHER RUNTIME= PARALLEL
                     MATCH p=(a1:Account)-[:Transfer]->(a2:Account), (p1:Person)-[:Own]->(a1), (a2)<-[:Own]-(p2:Person)
                     WHERE p1.country <> p2.country AND a1.balance_values IS NOT NULL AND a2.balance_values IS NOT NULL
-                    LIMIT 3000
-                    CALL edge2Time.TimeWalkPath(p, "%s", "%s", %d, 0.85) YIELD path
+                    LIMIT 20000
+                    CALL edge2Time.TimeWalkPathOpt(p, "%s", "%s", %d, 0.85) YIELD path
                     RETURN COUNT(*)""";
             else if(dataset.equals("finbench_500k"))
                 query = """ 
                     CYPHER RUNTIME= PARALLEL
                     MATCH p=(a1:Account)-[:Transfer]->(a2:Account), (p1:Person)-[:Own]->(a1), (a2)<-[:Own]-(p2:Person)
                     WHERE p1.country <> p2.country AND a1.balance_values IS NOT NULL AND a2.balance_values IS NOT NULL
-                    LIMIT 5000
-                    CALL edge2Time.TimeWalkPath(p, "%s", "%s", %d, 0.85) YIELD path
+                    LIMIT 200000
+                    CALL edge2Time.TimeWalkPathOpt(p, "%s", "%s", %d, 0.85) YIELD path
+                    RETURN COUNT(*)""";
+            else if(dataset.equals("finbench_1m"))
+                query = """ 
+                    CYPHER RUNTIME= PARALLEL
+                    MATCH p=(a1:Account)-[:Transfer]->(a2:Account), (p1:Person)-[:Own]->(a1), (a2)<-[:Own]-(p2:Person)
+                    WHERE p1.country <> p2.country AND a1.balance_values IS NOT NULL AND a2.balance_values IS NOT NULL
+                    LIMIT 400000
+                    CALL edge2Time.TimeWalkPathOpt(p, "%s", "%s", %d, 0.85) YIELD path
                     RETURN COUNT(*)""";
         }
 

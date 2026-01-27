@@ -1,0 +1,5 @@
+MATCH p=(a:Patient)-[:MOTHER_OF]->(b:Patient) RETURN a.patientId AS sourceNodeId, b.patientId AS targetNodeId"
+
+Neo4j query time (ms): 471
+InfluxDB query time (ms): 32192
+Time-Edge calculation time (ms): 253

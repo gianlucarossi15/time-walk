@@ -18,7 +18,7 @@ import java.util.stream.Stream;
 import static edge2Time.TDUtil.getTimeSeries;
 
 
-public class TimeWalkPath {
+public class StompTimeWalkPath {
 
 
     private static int countPath;
@@ -43,12 +43,11 @@ public class TimeWalkPath {
     private static DatabaseManagementService managementService;
     private static GraphDatabaseService db;
 
-    @Procedure(name = "edge2Time.TimeWalkPath", mode = Mode.READ)
+    @Procedure(name = "edge2Time.StompTimeWalkPath", mode = Mode.READ)
     public Stream<Result> testTransaction(@Name("Path") Path p,
                                           @Name("timeSeriesType") String tsType,
                                           @Name("r") String r,
-                                          @Name("subsequenceLength") long w,
-                                          @Name("threshold") double threshold) throws URISyntaxException, IOException {
+                                          @Name("subsequenceLength") long w) throws URISyntaxException, IOException {
         if (!Set.of("before", "meets", "equal", "overlaps","none").contains(r.toLowerCase())) {
             throw new IllegalArgumentException(r + " is not a valid Allen's relation. Please choose from 'before', 'meets', 'equal', or 'overlaps'.");
         }
@@ -58,7 +57,7 @@ public class TimeWalkPath {
             throw new IllegalArgumentException("Invalid depth parameters. minDepth and maxDepth must be >= 1 and minDepth <= maxDepth.");
         }
         countPath++;
-        getThPaths(p, tsType, r, w, paths, threshold);
+        getThPaths(p, tsType, r, w, paths);
         if (paths.isEmpty())
             return Stream.empty();
 
@@ -67,7 +66,7 @@ public class TimeWalkPath {
         return paths.stream().map(Result::new);
     }
 
-    Relationship getSingleHopPaths(Node source, Node target, String tsType, String r, long window, double threshold) {
+    Relationship getSingleHopPaths(Node source, Node target, String tsType, String r, long window) {
 
 
         Relationship thEdge = null;
@@ -94,15 +93,14 @@ public class TimeWalkPath {
 //        if (!res)
 //            return thEdge;
 
-        TS_JOIN t = new TS_JOIN();
 
+        StompWithAllen st = new StompWithAllen();
         int sourcePairs = ts1.size() - (int) window + 1;
         int targetPairs = ts2.size() - (int) window + 1;
         int totalPairs = sourcePairs * targetPairs;
         long startTime = System.currentTimeMillis();
-        Map<String, List<List<Double>>> ap = t.TS_Join(ts1, ts2, window, r, threshold);
+        Map<String, List<List<Double>>> ap = st.myStomp(ts1, ts2, (int) window, r);
         long endTime = System.currentTimeMillis();
-        log.info("TD-Join cost " + (endTime - startTime) + " ms");
 
 
 //        log.info("TS-Join execution time (ms): " + (endTime - startTime));
@@ -131,14 +129,14 @@ public class TimeWalkPath {
 
     }
 
-    public void getThPaths(Path p, String tsType, String r, long window, List<List<Relationship>> paths, double threshold) {
+    public void getThPaths(Path p, String tsType, String r, long window, List<List<Relationship>> paths) {
         List<Relationship> timeWalkPath = new ArrayList<>();
         Iterator<Node> nodeIter = p.nodes().iterator();
         if (!nodeIter.hasNext()) return;
         Node prev = nodeIter.next();
         while (nodeIter.hasNext()) {
             Node curr = nodeIter.next();
-            Relationship rel = getSingleHopPaths(prev, curr, tsType, r, window, threshold);
+            Relationship rel = getSingleHopPaths(prev, curr, tsType, r, window);
             if (rel == null) {
                 return; // Skip this path if any hop fails
             }
