@@ -1,16 +1,12 @@
-package edge2Time;
+package TimeWalk;
 
 import org.neo4j.graphdb.Node;
 
 import java.time.*;
-import java.time.temporal.TemporalAmount;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.time.Period;
 import java.time.Instant;
 
 public final class TDUtil {
@@ -91,13 +87,13 @@ public final class TDUtil {
 
 
 
-    public static int[] findIndexes(Map<String, List<List<Double>>> joinRes, String r) {
-        List<List<Double>> resultList = joinRes.get(r);
+    public static int[] findIndexes(Map<String, List<double[]>> joinRes, String r) {
+        List<double[]> resultList = joinRes.get(r);
         if (resultList == null || resultList.isEmpty()) {
-            throw new IllegalArgumentException("No join results found for key: " + r);
+            return new int[]{-1, -1}; // safe fallback
         }
         List<Double> values = resultList.stream()
-                .map(item -> item.get(2))
+                .map(item -> item[2])
                 .toList();
 
         // Find the index of the minimum value
@@ -110,8 +106,8 @@ public final class TDUtil {
         }
 
         // Get the first element (item[0]) corresponding to the minimum value
-        int seq_A_index = resultList.get(index).get(0).intValue();
-        int seq_B_index = resultList.get(index).get(1).intValue();
+        int seq_A_index = (int) resultList.get(index)[0];
+        int seq_B_index = (int) resultList.get(index)[1];
 
         return new int[]{seq_A_index, seq_B_index};
     }
